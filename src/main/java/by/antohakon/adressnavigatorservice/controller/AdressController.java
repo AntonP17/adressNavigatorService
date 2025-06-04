@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("api/adress")
-@RequiredArgsConstructor
 public class AdressController {
 
     private final GeocodeService geocodeService;
+
+    public AdressController(GeocodeService geocodeService) {
+        this.geocodeService = geocodeService;
+    }
 
     @PostMapping("/process")
     public void processAddress(@RequestBody AdressDto adressDto) {
