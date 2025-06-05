@@ -28,9 +28,11 @@ public class GeocodeService {
     @Value("${dadata.api.key}")
     private String dadataApiKey;
 
+    @Value("${dadata.secret.key}")
+    private String dadataSecretKey;
+
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Logger log = LoggerFactory.getLogger(GeocodeService.class);
-
 
     // пусть основной метод
     public void processAddress(AdressDto adressDto) {
@@ -61,6 +63,7 @@ public class GeocodeService {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Token " + dadataApiKey)
+                .header("X-Secret", dadataSecretKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -107,7 +110,7 @@ public class GeocodeService {
     //поиск координат яндек кратами
     private String fetchCoordinatesViaYandex(String address)  {
         log.info("зашли в метод fetchCoordinatesViaYandex");
-        String url = "https://geocode-maps.yandex.ru/1.x/?apikey=" + yandexApiKey
+        String url = "https://geocode-maps.yandex.ru/v1/?apikey=" + yandexApiKey
                 + "&geocode=" + URLEncoder.encode(address, StandardCharsets.UTF_8)
                 + "&format=json";
 
