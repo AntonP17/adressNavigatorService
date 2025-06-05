@@ -135,7 +135,7 @@ public class GeocodeService {
             log.error("не получилсоь прочитать json = {}", e.getMessage());
         }
 
-        String coordinates = yandexGeocodeResponse.getCoordinates();
+        String coordinates = yandexGeocodeResponse.getCoordinates().replace(" ", ",");
         log.info("координаты = " + coordinates);
         return coordinates;
 
@@ -146,6 +146,9 @@ public class GeocodeService {
     public String getDistance(String startCoords, String endCoords)  {
 
         log.info("зашли в метод getDistance");
+//        String formattedStart = startCoords.replace(" ", ",");
+//        String formattedEnd = endCoords.replace(" ", ",");
+
         // 1. Формируем URL для Yandex Matrix API
         String url = "https://api.routing.yandex.net/v2/distancematrix" +
                 "?origins=" + startCoords +  // Формат: "широта,долгота"
@@ -168,10 +171,8 @@ public class GeocodeService {
 
         // 3. Парсим ответ и возвращаем строку с метрами
         String json = response.body();
+        log.info("ответ = {}", json);
         String distanceStr = json.split("\"distance\":\\{\"value\":")[1].split("\\}")[0];
         return distanceStr + " м";  // Пример: "634000 м"
     }
-
-
-
 }
