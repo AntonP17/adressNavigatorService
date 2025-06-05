@@ -1,11 +1,10 @@
 package by.antohakon.adressnavigatorservice.service;
 
-import by.antohakon.adressnavigatorservice.dto.AdressDto;
+import by.antohakon.adressnavigatorservice.dto.DaDataCleanResponse;
+import by.antohakon.adressnavigatorservice.dto.YandexGeocodeResponse;
+import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,24 +32,31 @@ public class GeocodeService {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Logger log = LoggerFactory.getLogger(GeocodeService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // пусть основной метод
-    public void processAddress(AdressDto adressDto) {
+    public void processAddress(requestAdressDto adressDto)  {
 
-        String rawAddress = adressDto.adress();
+        String adresStartPoint = adressDto.adressStartPoint();
+        String adresEndPoint = adressDto.adressEndPoint();
 
         // 1. Очистка адреса через DaData
-        String cleanedAddress = cleanAddressViaDaData(rawAddress);
+        String cleanedAddressStart = cleanAddressViaDaData(adresStartPoint);
+        String cleanedAddressEnd = cleanAddressViaDaData(adresEndPoint);
 
         // 2. Поиск координат через Yandex
-        String coordinates = fetchCoordinatesViaYandex(cleanedAddress);
+        String coordinatesStart = fetchCoordinatesViaYandex(cleanedAddressStart);
+        String coordinatesEnd = fetchCoordinatesViaYandex(cleanedAddressEnd);
+
+        String distantion = getDistance(coordinatesStart,coordinatesEnd);
 
         // 3. Вывод в консоль
-        System.out.printf("""
-            Исходный адрес: %s
-            Очищенный адрес: %s
-            Координаты: %s
-            """, rawAddress, cleanedAddress, coordinates);
+//        System.out.printf("""
+//            Исходный адрес: %s
+//            Очищенный адрес: %s
+//            Координаты: %s
+//            """, rawAddress, cleanedAddress, coordinates);
+
     }
 
     // парсинг адреса из вакханалии в номлаьный
@@ -78,37 +84,27 @@ public class GeocodeService {
             log.error("исключение в методе cleanAddressViaDaData = {}", e.getMessage());
         }
 
-        // Парсим ответ DaData (пример: [{"result":"г Москва, ул Тверская, д 7"}]) НО тут NPE удет
-//        String json = response.body();
-//        return json.split("\"result\":\"")[1].split("\"")[0];
-
         // Парсим ответ DaData (пример: [{"result":"г Москва, ул Тверская, д 7"}])
-        String json = response != null ? response.body() : null;
+        String json = response.body();
         log.info("ответ = {}", json);
 
-        if (json == null || !json.contains("\"result\":\"")) {
-            log.error("Неверный формат JSON или пустой ответ от DaData");
-            return "Адрес не распознан";
-        }
-
+        DaDataCleanResponse[] cleanResponse = null;
         try {
-            String[] parts = json.split("\"result\":\"");
-            if (parts.length < 2) {
-                log.error("Не найден ключ 'result' в ответе DaData");
-                return "Адрес не распознан";
-            }
-
-            String cleanAddress = parts[1].split("\"")[0];
-            log.info("cleanAddress = {}", cleanAddress);
-            return cleanAddress;
-        } catch (Exception e) {
-            log.error("Ошибка парсинга адреса из DaData", e);
-            return "Ошибка обработки адреса";
+            cleanResponse = objectMapper.readValue(json, DaDataCleanResponse[].class);
+        } catch (JsonProcessingException e) {
+            log.error("не получилсоь прочитать json = {}", e.getMessage());
         }
+
+
+        String cleanAdress = cleanResponse[0].getResult();
+        log.info("чистый адрес = " + cleanAdress);
+        return cleanAdress;
+
     }
 
     //поиск координат яндек кратами
     private String fetchCoordinatesViaYandex(String address)  {
+
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = "https://geocode-maps.yandex.ru/v1/?apikey=" + yandexApiKey
                 + "&geocode=" + URLEncoder.encode(address, StandardCharsets.UTF_8)
@@ -128,38 +124,53 @@ public class GeocodeService {
             log.error("исключение в методе fetchCoordinatesViaYandex = {}", e.getMessage());
         }
 
-        // Парсим ответ Yandex (пример: "pos":"37.6056 55.7602") АНАЛОГИЧНО NPE
-//        String json = response.body();
-//        String pos = json.split("\"pos\":\"")[1].split("\"")[0];
-//        String[] parts = pos.split(" ");
-//        return parts[1] + "°N, " + parts[0] + "°E";
-
         // Парсим ответ Yandex (пример: "pos":"37.6056 55.7602")
-        String json = response != null ? response.body() : null;
+        String json = response.body();
         log.info("ответ = {}", json);
 
-        if (json == null || !json.contains("\"pos\":\"")) {
-            log.error("Неверный формат JSON или пустой ответ");
-            return "Координаты не найдены";
-        }
-
+        YandexGeocodeResponse yandexGeocodeResponse = null;
         try {
-            String pos = json.split("\"pos\":\"")[1].split("\"")[0];
-            log.info("координаты = {}", pos);
-
-            String[] parts = pos.split(" ");
-            if (parts.length < 2) {
-                log.error("Неверный формат координат");
-                return "Координаты не найдены";
-            }
-
-            return parts[1] + "°N, " + parts[0] + "°E";
-        } catch (Exception e) {
-            log.error("Ошибка парсинга координат", e);
-            return "Ошибка при обработке координат";
+            yandexGeocodeResponse = objectMapper.readValue(json, YandexGeocodeResponse.class);
+        } catch (JsonProcessingException e) {
+            log.error("не получилсоь прочитать json = {}", e.getMessage());
         }
+
+        String coordinates = yandexGeocodeResponse.getCoordinates();
+        log.info("координаты = " + coordinates);
+        return coordinates;
+
     }
 
+
+    //подсчет расстояния
+    public String getDistance(String startCoords, String endCoords)  {
+
+        log.info("зашли в метод getDistance");
+        // 1. Формируем URL для Yandex Matrix API
+        String url = "https://api.routing.yandex.net/v2/distancematrix" +
+                "?origins=" + startCoords +  // Формат: "широта,долгота"
+                "&destinations=" + endCoords +
+                "&apikey=" + yandexApiKey;   // Ключ из application.properties
+
+        // 2. Отправляем запрос
+        HttpResponse<String> response = null;
+        try {
+            response = httpClient.send(
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .GET()
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
+        } catch (IOException | InterruptedException e) {
+            log.error("исключение в методе getDistance = {}", e.getMessage());
+        }
+
+        // 3. Парсим ответ и возвращаем строку с метрами
+        String json = response.body();
+        String distanceStr = json.split("\"distance\":\\{\"value\":")[1].split("\\}")[0];
+        return distanceStr + " м";  // Пример: "634000 м"
+    }
 
 
 

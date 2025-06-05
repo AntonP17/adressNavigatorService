@@ -1,8 +1,7 @@
 package by.antohakon.adressnavigatorservice.controller;
 
-import by.antohakon.adressnavigatorservice.dto.AdressDto;
+import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +18,7 @@ public class AdressController {
     }
 
     @PostMapping("/process")
-    public void processAddress(@RequestBody AdressDto adressDto) {
+    public void processAddress(@RequestBody requestAdressDto adressDto) {
         geocodeService.processAddress(adressDto);
     }
 
