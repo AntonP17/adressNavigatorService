@@ -3,6 +3,7 @@ package by.antohakon.adressnavigatorservice.service;
 import by.antohakon.adressnavigatorservice.dto.DaDataCleanResponse;
 import by.antohakon.adressnavigatorservice.dto.YandexGeocodeResponse;
 import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
+import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class GeocodeService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // пусть основной метод
-    public void processAddress(requestAdressDto adressDto)  {
+    public responseAdressDto processAddress(requestAdressDto adressDto)  {
 
         String adresStartPoint = adressDto.adressStartPoint();
         String adresEndPoint = adressDto.adressEndPoint();
@@ -48,7 +49,12 @@ public class GeocodeService {
         String coordinatesStart = fetchCoordinatesViaYandex(cleanedAddressStart);
         String coordinatesEnd = fetchCoordinatesViaYandex(cleanedAddressEnd);
 
-        String distantion = getDistance(coordinatesStart,coordinatesEnd);
+        double distantion = getDistance(coordinatesStart,coordinatesEnd);
+
+        responseAdressDto response = new responseAdressDto(cleanedAddressStart,cleanedAddressEnd,distantion);
+        log.info(response.toString());
+
+        return response;
 
         // 3. Вывод в консоль
 //        System.out.printf("""
@@ -136,43 +142,82 @@ public class GeocodeService {
         }
 
         String coordinates = yandexGeocodeResponse.getCoordinates().replace(" ", ",");
-        log.info("координаты = " + coordinates);
+        log.info("координаты = {}", coordinates);
         return coordinates;
 
     }
 
 
     //подсчет расстояния
-    public String getDistance(String startCoords, String endCoords)  {
+    public double getDistance(String startCoords, String endCoords)  {
 
-        log.info("зашли в метод getDistance");
-//        String formattedStart = startCoords.replace(" ", ",");
-//        String formattedEnd = endCoords.replace(" ", ",");
+//        log.info("зашли в метод getDistance");
+////        String formattedStart = startCoords.replace(" ", ",");
+////        String formattedEnd = endCoords.replace(" ", ",");
+//
+//        // 1. Формируем URL для Yandex Matrix API
+//        String url = "https://api.routing.yandex.net/v2/distancematrix" +
+//                "?origins=" + startCoords +  // Формат: "широта,долгота"
+//                "&destinations=" + endCoords +
+//                "&apikey=" + yandexApiKey;   // Ключ из application.properties
+//
+//        // 2. Отправляем запрос
+//        HttpResponse<String> response = null;
+//        try {
+//            response = httpClient.send(
+//                    HttpRequest.newBuilder()
+//                            .uri(URI.create(url))
+//                            .GET()
+//                            .build(),
+//                    HttpResponse.BodyHandlers.ofString()
+//            );
+//        } catch (IOException | InterruptedException e) {
+//            log.error("исключение в методе getDistance = {}", e.getMessage());
+//        }
+//
+//        // 3. Парсим ответ и возвращаем строку с метрами
+//        String json = response.body();
+//        log.info("ответ = {}", json);
+//        String distanceStr = json.split("\"distance\":\\{\"value\":")[1].split("\\}")[0];
+//        return distanceStr + " м";  // Пример: "634000 м"
+// Парсим координаты
+        double[] point1 = parseCoordinates(startCoords);
+        double[] point2 = parseCoordinates(endCoords);
 
-        // 1. Формируем URL для Yandex Matrix API
-        String url = "https://api.routing.yandex.net/v2/distancematrix" +
-                "?origins=" + startCoords +  // Формат: "широта,долгота"
-                "&destinations=" + endCoords +
-                "&apikey=" + yandexApiKey;   // Ключ из application.properties
+        // Радиус Земли в метрах
+        final double R = 6371e3;
 
-        // 2. Отправляем запрос
-        HttpResponse<String> response = null;
+        // Переводим градусы в радианы
+        double φ1 = Math.toRadians(point1[0]);
+        double φ2 = Math.toRadians(point2[0]);
+        double Δφ = Math.toRadians(point2[0] - point1[0]);
+        double Δλ = Math.toRadians(point2[1] - point1[1]);
+
+        // Формула Гаверсинуса
+        double a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                        Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        double distance = Math.round((R * c) * 100) / 100.0;
+        log.info("distantion = {} metres", distance);
+
+        return distance;
+
+    }
+
+    private static double[] parseCoordinates(String coord) {
         try {
-            response = httpClient.send(
-                    HttpRequest.newBuilder()
-                            .uri(URI.create(url))
-                            .GET()
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString()
-            );
-        } catch (IOException | InterruptedException e) {
-            log.error("исключение в методе getDistance = {}", e.getMessage());
+            String[] parts = coord.split(",");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Неверный формат координат. Ожидается 'широта,долгота'");
+            }
+            return new double[]{
+                    Double.parseDouble(parts[0].trim()), // Широта
+                    Double.parseDouble(parts[1].trim())  // Долгота
+            };
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Координаты должны быть числами", e);
         }
-
-        // 3. Парсим ответ и возвращаем строку с метрами
-        String json = response.body();
-        log.info("ответ = {}", json);
-        String distanceStr = json.split("\"distance\":\\{\"value\":")[1].split("\\}")[0];
-        return distanceStr + " м";  // Пример: "634000 м"
     }
 }
