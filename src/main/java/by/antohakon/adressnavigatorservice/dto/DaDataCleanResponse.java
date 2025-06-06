@@ -6,12 +6,7 @@ import lombok.Data;
 import lombok.Getter;
 
 @Data
-@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DaDataCleanResponse {
     private String result;
-
-    public String getResult() {
-        return result;
-    }
 }

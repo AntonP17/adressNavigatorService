@@ -6,6 +6,8 @@ import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
 import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +22,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class GeocodeService {
 
     @Value("${yandex.api.key}")
@@ -32,7 +36,7 @@ public class GeocodeService {
     private String dadataSecretKey;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final Logger log = LoggerFactory.getLogger(GeocodeService.class);
+    //private final Logger log = LoggerFactory.getLogger(GeocodeService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // пусть основной метод
@@ -55,13 +59,6 @@ public class GeocodeService {
         log.info(response.toString());
 
         return response;
-
-        // 3. Вывод в консоль
-//        System.out.printf("""
-//            Исходный адрес: %s
-//            Очищенный адрес: %s
-//            Координаты: %s
-//            """, rawAddress, cleanedAddress, coordinates);
 
     }
 
@@ -151,36 +148,7 @@ public class GeocodeService {
     //подсчет расстояния
     public double getDistance(String startCoords, String endCoords)  {
 
-//        log.info("зашли в метод getDistance");
-////        String formattedStart = startCoords.replace(" ", ",");
-////        String formattedEnd = endCoords.replace(" ", ",");
-//
-//        // 1. Формируем URL для Yandex Matrix API
-//        String url = "https://api.routing.yandex.net/v2/distancematrix" +
-//                "?origins=" + startCoords +  // Формат: "широта,долгота"
-//                "&destinations=" + endCoords +
-//                "&apikey=" + yandexApiKey;   // Ключ из application.properties
-//
-//        // 2. Отправляем запрос
-//        HttpResponse<String> response = null;
-//        try {
-//            response = httpClient.send(
-//                    HttpRequest.newBuilder()
-//                            .uri(URI.create(url))
-//                            .GET()
-//                            .build(),
-//                    HttpResponse.BodyHandlers.ofString()
-//            );
-//        } catch (IOException | InterruptedException e) {
-//            log.error("исключение в методе getDistance = {}", e.getMessage());
-//        }
-//
-//        // 3. Парсим ответ и возвращаем строку с метрами
-//        String json = response.body();
-//        log.info("ответ = {}", json);
-//        String distanceStr = json.split("\"distance\":\\{\"value\":")[1].split("\\}")[0];
-//        return distanceStr + " м";  // Пример: "634000 м"
-// Парсим координаты
+        // Парсим координаты
         double[] point1 = parseCoordinates(startCoords);
         double[] point2 = parseCoordinates(endCoords);
 

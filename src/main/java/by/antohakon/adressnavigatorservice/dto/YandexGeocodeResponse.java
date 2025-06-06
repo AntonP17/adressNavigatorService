@@ -13,10 +13,6 @@ public class YandexGeocodeResponse {
 
     private Response response;
 
-    public Response getResponse() {
-        return response;
-    }
-
     public String getCoordinates() {
         if (response == null || response.getGeoObjectCollection() == null ||
                 response.getGeoObjectCollection().getFeatureMember() == null ||
@@ -39,9 +35,6 @@ public class YandexGeocodeResponse {
         @JsonProperty("GeoObjectCollection")
         private GeoObjectCollection geoObjectCollection;
 
-        public GeoObjectCollection getGeoObjectCollection() {
-            return geoObjectCollection;
-        }
     }
 
     @Data
@@ -52,14 +45,6 @@ public class YandexGeocodeResponse {
 
         @JsonProperty("featureMember")
         private List<FeatureMember> featureMember;
-
-        public MetaDataProperty getMetaDataProperty() {
-            return metaDataProperty;
-        }
-
-        public List<FeatureMember> getFeatureMember() {
-            return featureMember;
-        }
     }
 
     @Data
@@ -67,10 +52,6 @@ public class YandexGeocodeResponse {
     public static class MetaDataProperty {
         @JsonProperty("GeocoderResponseMetaData")
         private GeocoderResponseMetaData geocoderResponseMetaData;
-
-        public GeocoderResponseMetaData getGeocoderResponseMetaData() {
-            return geocoderResponseMetaData;
-        }
     }
 
     @Data
@@ -79,18 +60,6 @@ public class YandexGeocodeResponse {
         private String request;
         private String results;
         private String found;
-
-        public String getRequest() {
-            return request;
-        }
-
-        public String getResults() {
-            return results;
-        }
-
-        public String getFound() {
-            return found;
-        }
     }
 
     @Data
@@ -98,10 +67,6 @@ public class YandexGeocodeResponse {
     public static class FeatureMember {
         @JsonProperty("GeoObject")
         private GeoObject geoObject;
-
-        public GeoObject getGeoObject() {
-            return geoObject;
-        }
     }
 
     @Data
@@ -115,22 +80,6 @@ public class YandexGeocodeResponse {
 
         private String name;
         private String description;
-
-        public GeoObjectMetaDataProperty getMetaDataProperty() {
-            return metaDataProperty;
-        }
-
-        public Point getPoint() {
-            return point;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getDescription() {
-            return description;
-        }
     }
 
     @Data
@@ -138,10 +87,6 @@ public class YandexGeocodeResponse {
     public static class GeoObjectMetaDataProperty {
         @JsonProperty("GeocoderMetaData")
         private GeocoderMetaData geocoderMetaData;
-
-        public GeocoderMetaData getGeocoderMetaData() {
-            return geocoderMetaData;
-        }
     }
 
     @Data
@@ -151,22 +96,6 @@ public class YandexGeocodeResponse {
         private String text;
         private String kind;
         private Address address;
-
-        public String getPrecision() {
-            return precision;
-        }
-
-        public String getText() {
-            return text;
-        }
-
-        public String getKind() {
-            return kind;
-        }
-
-        public Address getAddress() {
-            return address;
-        }
     }
 
     @Data
@@ -176,17 +105,6 @@ public class YandexGeocodeResponse {
         private String formatted;
         private List<AddressComponent> Components;
 
-        public String getCountry_code() {
-            return country_code;
-        }
-
-        public String getFormatted() {
-            return formatted;
-        }
-
-        public List<AddressComponent> getComponents() {
-            return Components;
-        }
     }
 
     @Data
@@ -194,14 +112,6 @@ public class YandexGeocodeResponse {
     public static class AddressComponent {
         private String kind;
         private String name;
-
-        public String getKind() {
-            return kind;
-        }
-
-        public String getName() {
-            return name;
-        }
     }
 
     @Data
@@ -209,9 +119,5 @@ public class YandexGeocodeResponse {
     public static class Point {
         @JsonProperty("pos")
         private String pos;
-
-        public String getPos() {
-            return pos;
-        }
     }
 }
