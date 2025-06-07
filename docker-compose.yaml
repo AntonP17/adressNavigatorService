@@ -13,7 +13,8 @@ services:
 
   adress-navigator:
     container_name: adress-navigator
-    build: .
+    #build: .
+    image: antonp17/adressnavigatorservice-adress-navigator
     depends_on:
       - mysql
     environment:
