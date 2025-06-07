@@ -1,5 +1,6 @@
 package by.antohakon.adressnavigatorservice.controller;
 
+import by.antohakon.adressnavigatorservice.dto.AdressNavigationResponseDto;
 import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
 import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
@@ -17,7 +18,7 @@ public class AdressController {
     private final GeocodeService geocodeService;
 
     @PostMapping("/process")
-    public responseAdressDto processAddress(@RequestBody requestAdressDto adressDto) {
+    public AdressNavigationResponseDto processAddress(@RequestBody requestAdressDto adressDto) {
        return geocodeService.processAddress(adressDto);
     }
 

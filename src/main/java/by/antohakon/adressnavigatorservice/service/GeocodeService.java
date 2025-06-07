@@ -1,9 +1,9 @@
 package by.antohakon.adressnavigatorservice.service;
 
-import by.antohakon.adressnavigatorservice.dto.DaDataCleanResponse;
-import by.antohakon.adressnavigatorservice.dto.YandexGeocodeResponse;
-import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
-import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
+import by.antohakon.adressnavigatorservice.dto.*;
+import by.antohakon.adressnavigatorservice.dto.mapper.AdressNavigationMapper;
+import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
+import by.antohakon.adressnavigatorservice.repository.AdressNavigationRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,11 +36,12 @@ public class GeocodeService {
     private String dadataSecretKey;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    //private final Logger log = LoggerFactory.getLogger(GeocodeService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AdressNavigationRepository adressNavigationRepository;
+    private final AdressNavigationMapper adressNavigationMapper;
 
     // пусть основной метод
-    public responseAdressDto processAddress(requestAdressDto adressDto)  {
+    public AdressNavigationResponseDto processAddress(requestAdressDto adressDto)  {
 
         String adresStartPoint = adressDto.adressStartPoint();
         String adresEndPoint = adressDto.adressEndPoint();
@@ -55,11 +56,26 @@ public class GeocodeService {
 
         double distantion = getDistance(coordinatesStart,coordinatesEnd);
 
-        responseAdressDto response = new responseAdressDto(cleanedAddressStart,cleanedAddressEnd,distantion);
-        log.info(response.toString());
+        if (adressNavigationRepository.existsByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd)) {
+          throw new IllegalArgumentException("Такие адреса в БД уже есть = " + cleanedAddressStart + cleanedAddressEnd);
+        }
 
-        return response;
+        AdressDistantionEntity entity = new AdressDistantionEntity();
+        entity.setFirstAdress(cleanedAddressStart);
+        entity.setSecondAdress(cleanedAddressEnd);
+        entity.setDistantion(distantion);
 
+        adressNavigationRepository.save(entity);
+
+//        AdressNavigationResponseDto responseDto = AdressNavigationResponseDto.builder()
+//                .id(entity.getId())
+//                .firstAdress(entity.getFirstAdress())
+//                .secondAdress(entity.getSecondAdress())
+//                .distantion(entity.getDistantion())
+//                .build();
+
+
+         return adressNavigationMapper.toDto(entity);
     }
 
     // парсинг адреса из вакханалии в номлаьный
