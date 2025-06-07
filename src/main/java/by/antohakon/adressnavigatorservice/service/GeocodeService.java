@@ -3,6 +3,7 @@ package by.antohakon.adressnavigatorservice.service;
 import by.antohakon.adressnavigatorservice.dto.*;
 import by.antohakon.adressnavigatorservice.dto.mapper.AdressNavigationMapper;
 import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
+import by.antohakon.adressnavigatorservice.exceptions.DuplicateAdressException;
 import by.antohakon.adressnavigatorservice.repository.AdressNavigationRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,6 +23,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -40,8 +44,20 @@ public class GeocodeService {
     private final AdressNavigationRepository adressNavigationRepository;
     private final AdressNavigationMapper adressNavigationMapper;
 
+    public Page<AdressNavigationResponseDto> getAllAdresses(Pageable pageable) {
+
+      return adressNavigationRepository.findAll(pageable)
+              .map(adress -> AdressNavigationResponseDto.builder()
+                      .id(adress.getId())
+                      .firstAdress(adress.getFirstAdress())
+                      .secondAdress(adress.getSecondAdress())
+                      .distantion(adress.getDistantion())
+                      .build()
+              );
+    }
+
     // пусть основной метод
-    public AdressNavigationResponseDto processAddress(requestAdressDto adressDto)  {
+    public AdressNavigationResponseDto processAddress(requestAdressDto adressDto) throws IOException, InterruptedException {
 
         String adresStartPoint = adressDto.adressStartPoint();
         String adresEndPoint = adressDto.adressEndPoint();
@@ -57,7 +73,7 @@ public class GeocodeService {
         double distantion = getDistance(coordinatesStart,coordinatesEnd);
 
         if (adressNavigationRepository.existsByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd)) {
-          throw new IllegalArgumentException("Такие адреса в БД уже есть = " + cleanedAddressStart + cleanedAddressEnd);
+          throw new DuplicateAdressException("Такие адреса в БД уже есть = " + cleanedAddressStart + "||" + cleanedAddressEnd);
         }
 
         AdressDistantionEntity entity = new AdressDistantionEntity();
@@ -79,7 +95,7 @@ public class GeocodeService {
     }
 
     // парсинг адреса из вакханалии в номлаьный
-    private String cleanAddressViaDaData(String dirtyAddress) {
+    private String cleanAddressViaDaData(String dirtyAddress) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
         String url = "https://cleaner.dadata.ru/api/v1/clean/address";
@@ -93,27 +109,14 @@ public class GeocodeService {
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        HttpResponse<String> response = null;
-        try {
-            response = httpClient.send(
-                    request, HttpResponse.BodyHandlers.ofString()
-            );
-            log.info("ответ = {}",response.body());
-        } catch (IOException | InterruptedException e) {
-            log.error("исключение в методе cleanAddressViaDaData = {}", e.getMessage());
-        }
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         // Парсим ответ DaData (пример: [{"result":"г Москва, ул Тверская, д 7"}])
         String json = response.body();
         log.info("ответ = {}", json);
 
-        DaDataCleanResponse[] cleanResponse = null;
-        try {
-            cleanResponse = objectMapper.readValue(json, DaDataCleanResponse[].class);
-        } catch (JsonProcessingException e) {
-            log.error("не получилсоь прочитать json = {}", e.getMessage());
-        }
 
+        DaDataCleanResponse[] cleanResponse = objectMapper.readValue(json, DaDataCleanResponse[].class);
 
         String cleanAdress = cleanResponse[0].getResult();
         log.info("чистый адрес = " + cleanAdress);
@@ -122,7 +125,7 @@ public class GeocodeService {
     }
 
     //поиск координат яндек кратами
-    private String fetchCoordinatesViaYandex(String address)  {
+    private String fetchCoordinatesViaYandex(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = "https://geocode-maps.yandex.ru/v1/?apikey=" + yandexApiKey
@@ -134,25 +137,15 @@ public class GeocodeService {
                 .GET()
                 .build();
 
-        HttpResponse<String> response = null;
-        try {
-            response = httpClient.send(
+        HttpResponse<String> response = httpClient.send(
                     request, HttpResponse.BodyHandlers.ofString()
-            );
-        } catch (IOException | InterruptedException e) {
-            log.error("исключение в методе fetchCoordinatesViaYandex = {}", e.getMessage());
-        }
+           );
 
         // Парсим ответ Yandex (пример: "pos":"37.6056 55.7602")
         String json = response.body();
         log.info("ответ = {}", json);
 
-        YandexGeocodeResponse yandexGeocodeResponse = null;
-        try {
-            yandexGeocodeResponse = objectMapper.readValue(json, YandexGeocodeResponse.class);
-        } catch (JsonProcessingException e) {
-            log.error("не получилсоь прочитать json = {}", e.getMessage());
-        }
+        YandexGeocodeResponse yandexGeocodeResponse = objectMapper.readValue(json, YandexGeocodeResponse.class);
 
         String coordinates = yandexGeocodeResponse.getCoordinates().replace(" ", ",");
         log.info("координаты = {}", coordinates);

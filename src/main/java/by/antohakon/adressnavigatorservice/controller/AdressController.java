@@ -5,10 +5,12 @@ import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
 import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("api/adress")
@@ -18,8 +20,14 @@ public class AdressController {
     private final GeocodeService geocodeService;
 
     @PostMapping("/process")
-    public AdressNavigationResponseDto processAddress(@RequestBody requestAdressDto adressDto) {
+    public AdressNavigationResponseDto processAddress(@RequestBody requestAdressDto adressDto) throws IOException, InterruptedException {
        return geocodeService.processAddress(adressDto);
+    }
+
+    @GetMapping
+    public Page<AdressNavigationResponseDto> getAdresses(Pageable pageable) {
+        return geocodeService.getAllAdresses(pageable);
+
     }
 
 
