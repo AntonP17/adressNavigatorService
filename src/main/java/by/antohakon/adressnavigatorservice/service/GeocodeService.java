@@ -20,6 +20,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -71,8 +72,13 @@ public class GeocodeService {
         String cleanedAddressStart = cleanAddressViaDaData(adresStartPoint);
         String cleanedAddressEnd = cleanAddressViaDaData(adresEndPoint);
 
-        if (adressNavigationRepository.existsByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd)) {
-            throw new DuplicateAdressException("Такие адреса в БД уже есть = " + cleanedAddressStart + "||" + cleanedAddressEnd);
+        // 2. Проверка существования записи в БД
+        Optional<AdressDistantionEntity> existingEntity = adressNavigationRepository
+                .findByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd);
+
+        if (existingEntity.isPresent()) {
+            // Если запись существует - возвращаем её
+            return adressNavigationMapper.toDto(existingEntity.get());
         }
 
         // 2. Поиск координат через Yandex
