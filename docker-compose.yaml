@@ -1,0 +1,29 @@
+services:
+  mysql:
+    container_name: 'MySQL-DB'
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: my-DB
+      MYSQL_USER: 123456
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 1234567
+    ports:
+      - "3306:3306"
+
+
+  adress-navigator:
+    container_name: adress-navigator
+    #build: .
+    image: antonp17/adressnavigatorservice-adress-navigator
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/my-DB
+      SPRING_DATASOURCE_USERNAME: 123456
+      SPRING_DATASOURCE_PASSWORD: 123456
+    ports:
+      - "8080:8080"
+
+
+
+

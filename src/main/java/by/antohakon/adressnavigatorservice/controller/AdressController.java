@@ -1,27 +1,30 @@
 package by.antohakon.adressnavigatorservice.controller;
 
-import by.antohakon.adressnavigatorservice.dto.AdressDto;
+import by.antohakon.adressnavigatorservice.dto.AdressNavigationResponseDto;
+import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+
 
 @RestController
 @RequestMapping("api/adress")
+@RequiredArgsConstructor
 public class AdressController {
 
     private final GeocodeService geocodeService;
 
-    public AdressController(GeocodeService geocodeService) {
-        this.geocodeService = geocodeService;
-    }
-
     @PostMapping("/process")
-    public void processAddress(@RequestBody AdressDto adressDto) {
-        geocodeService.processAddress(adressDto);
+    public AdressNavigationResponseDto processAddress(@RequestBody requestAdressDto adressDto) throws IOException, InterruptedException {
+       return geocodeService.processAddress(adressDto);
     }
 
-
+    @GetMapping("/all")
+    public Page<AdressNavigationResponseDto> getAdresses(Pageable pageable) {
+        return geocodeService.getAllAdresses(pageable);
+    }
 }
