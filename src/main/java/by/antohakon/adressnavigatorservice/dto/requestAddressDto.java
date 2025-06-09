@@ -1,4 +1,4 @@
 package by.antohakon.adressnavigatorservice.dto;
 
-public record requestAdressDto(String address) {
+public record requestAddressDto(String address) {
 }

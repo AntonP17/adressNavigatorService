@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class AdressNavigationResponseDto {
+public class AddressNavigationResponseDto {
 
     private Long id;
     private String address;

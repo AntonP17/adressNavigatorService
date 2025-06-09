@@ -1,9 +1,9 @@
 package by.antohakon.adressnavigatorservice.service;
 
 import by.antohakon.adressnavigatorservice.dto.*;
-import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
-import by.antohakon.adressnavigatorservice.mapper.AdressNavigationMapper;
-import by.antohakon.adressnavigatorservice.repository.AdressNavigationRepository;
+import by.antohakon.adressnavigatorservice.entity.AddressDistantionEntity;
+import by.antohakon.adressnavigatorservice.mapper.AddressNavigationMapper;
+import by.antohakon.adressnavigatorservice.repository.AddressNavigationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,58 +41,53 @@ public class GeocodeService {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final AdressNavigationRepository adressNavigationRepository;
-    private final AdressNavigationMapper adressNavigationMapper;
+    private final AddressNavigationRepository addressNavigationRepository;
+    private final AddressNavigationMapper addressNavigationMapper;
 
+    public Page<AddressNavigationResponseDto> getAllAddresses(Pageable pageable) {
 
-
-
-    public Page<AdressNavigationResponseDto> getAllAdresses(Pageable pageable) {
-
-        return adressNavigationRepository.findAll(pageable)
+        return addressNavigationRepository.findAll(pageable)
                 .map(GeocodeService::addressNavigationResponseDtoBuild);
     }
 
-    private static AdressNavigationResponseDto addressNavigationResponseDtoBuild(AdressDistantionEntity adress) {
-        return AdressNavigationResponseDto.builder()
+    private static AddressNavigationResponseDto addressNavigationResponseDtoBuild(AddressDistantionEntity adress) {
+        return AddressNavigationResponseDto.builder()
                 .id(adress.getId())
                 .address(adress.getAddress())
                 .distantion(adress.getDistantion())
                 .build();
     }
 
-    // пусть основной метод
-    public AdressNavigationResponseDto processAddress(requestAdressDto addressDto) throws IOException, InterruptedException {
 
-          DaDataApiResponse daDataApiResponse = cleanAddressViaDaData(addressDto.address()); //достали из DadataAPI адрес и координаты
+    public AddressNavigationResponseDto processAddress(requestAddressDto addressDto) throws IOException, InterruptedException {
 
-        //2. Проверка существования записи в БД
-        Optional<AdressDistantionEntity> existingEntity = adressNavigationRepository
+          DaDataApiResponse daDataApiResponse = findAddressFromDaDataApi(addressDto.address());
+
+        Optional<AddressDistantionEntity> existingEntity = addressNavigationRepository
                 .findByAddress(daDataApiResponse.getFormattedAddress());
 
         if (existingEntity.isPresent()) {
-            // Если запись существует - возвращаем её
             log.info("Запись найдена в БД: {}", existingEntity.get());
-            return adressNavigationMapper.toDto(existingEntity.get());
+            return addressNavigationMapper.toDto(existingEntity.get());
         }
 
-          YandexApiResponse yandexApiResponse = fetchCoordinatesViaYandex(addressDto.address()); // достаом из YAndexAPI адрес и координаты
+          YandexApiResponse yandexApiResponse = findAddressFromYandexApi(addressDto.address());
 
           double distance = getDistance(daDataApiResponse.getCoordinates(), yandexApiResponse.getCoordinates());
 
-        AdressDistantionEntity entity = new AdressDistantionEntity();
+        AddressDistantionEntity entity = new AddressDistantionEntity();
         entity.setAddress(daDataApiResponse.getFormattedAddress());
         entity.setDistantion(distance);
 
-        adressNavigationRepository.save(entity);
+        addressNavigationRepository.save(entity);
 
-        return adressNavigationMapper.toDto(entity);
+        return addressNavigationMapper.toDto(entity);
 
 
     }
 
-    // парсинг адреса из вакханалии в номлаьный
-    private DaDataApiResponse cleanAddressViaDaData(String address) throws IOException, InterruptedException {
+
+    private DaDataApiResponse findAddressFromDaDataApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
         String requestBody = "[\"" + address + "\"]";
@@ -107,15 +102,12 @@ public class GeocodeService {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        // Парсим ответ DaData (пример: [{"result":"г Москва, ул Тверская, д 7"}])
         String json = response.body();
         log.info("ответ = {}", json);
 
-        // Десериализация JSON-массива в список объектов
         List<DaDataApiResponse> responses = objectMapper.readValue(json,
                 objectMapper.getTypeFactory().constructCollectionType(List.class, DaDataApiResponse.class));
 
-        // Обработка первого элемента массива
         if (!responses.isEmpty()) {
             DaDataApiResponse daDataApiResponse = responses.get(0);
             log.info("ответ = {} {}", daDataApiResponse.getFormattedAddress(), daDataApiResponse.getCoordinates());
@@ -126,8 +118,8 @@ public class GeocodeService {
         }
     }
 
-    //поиск координат яндек кратами
-    private YandexApiResponse fetchCoordinatesViaYandex(String address) throws IOException, InterruptedException {
+
+    private YandexApiResponse findAddressFromYandexApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = String.format(
@@ -145,7 +137,6 @@ public class GeocodeService {
                 request, HttpResponse.BodyHandlers.ofString()
         );
 
-        // Парсим ответ Yandex (пример: "pos":"37.6056 55.7602")
         String json = response.body();
         log.info("ответ = {}", json);
 
@@ -155,17 +146,13 @@ public class GeocodeService {
     }
 
 
-    //подсчет расстояния
     public double getDistance(String startCoords, String endCoords) {
 
-        // Парсим координаты
         double[] point1 = parseCoordinates(startCoords);
         double[] point2 = parseCoordinates(endCoords);
 
-        // Радиус Земли в метрах
         final double R = 6371e3;
 
-        // Переводим градусы в радианы
         double startLatRad = Math.toRadians(point1[0]);
         double endLatRad = Math.toRadians(point2[0]);
         double deltaLatRad = Math.toRadians(point2[0] - point1[0]);
@@ -185,17 +172,10 @@ public class GeocodeService {
     }
 
     private static double[] parseCoordinates(String coord) {
-        try {
             String[] parts = coord.split(",");
-            if (parts.length != 2) {
-                throw new IllegalArgumentException("Неверный формат координат. Ожидается 'широта,долгота'");
-            }
             return new double[]{
                     Double.parseDouble(parts[0].trim()), // Широта
                     Double.parseDouble(parts[1].trim())  // Долгота
             };
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Координаты должны быть числами", e);
-        }
     }
 }
