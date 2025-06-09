@@ -1,16 +1,13 @@
 package by.antohakon.adressnavigatorservice.service;
 
 import by.antohakon.adressnavigatorservice.dto.*;
-import by.antohakon.adressnavigatorservice.dto.mapper.AdressNavigationMapper;
 import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
 import by.antohakon.adressnavigatorservice.exceptions.DuplicateAdressException;
+import by.antohakon.adressnavigatorservice.mapper.AdressNavigationMapper;
 import by.antohakon.adressnavigatorservice.repository.AdressNavigationRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +20,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -46,35 +42,38 @@ public class GeocodeService {
 
     public Page<AdressNavigationResponseDto> getAllAdresses(Pageable pageable) {
 
-      return adressNavigationRepository.findAll(pageable)
-              .map(adress -> AdressNavigationResponseDto.builder()
-                      .id(adress.getId())
-                      .firstAdress(adress.getFirstAdress())
-                      .secondAdress(adress.getSecondAdress())
-                      .distantion(adress.getDistantion())
-                      .build()
-              );
+        return adressNavigationRepository.findAll(pageable)
+                .map(GeocodeService::addressNavigationResponseDtoBuild);
+    }
+
+    private static AdressNavigationResponseDto addressNavigationResponseDtoBuild(AdressDistantionEntity adress) {
+        return AdressNavigationResponseDto.builder()
+                .id(adress.getId())
+                .firstAdress(adress.getFirstAdress())
+                .secondAdress(adress.getSecondAdress())
+                .distantion(adress.getDistantion())
+                .build();
     }
 
     // пусть основной метод
-    public AdressNavigationResponseDto processAddress(requestAdressDto adressDto) throws IOException, InterruptedException {
+    public AdressNavigationResponseDto processAddress(requestAdressDto addressDto) throws IOException, InterruptedException {
 
-        String adresStartPoint = adressDto.adressStartPoint();
-        String adresEndPoint = adressDto.adressEndPoint();
+        String adresStartPoint = addressDto.adressStartPoint();
+        String adresEndPoint = addressDto.adressEndPoint();
 
         // 1. Очистка адреса через DaData
         String cleanedAddressStart = cleanAddressViaDaData(adresStartPoint);
         String cleanedAddressEnd = cleanAddressViaDaData(adresEndPoint);
 
+        if (adressNavigationRepository.existsByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd)) {
+            throw new DuplicateAdressException("Такие адреса в БД уже есть = " + cleanedAddressStart + "||" + cleanedAddressEnd);
+        }
+
         // 2. Поиск координат через Yandex
         String coordinatesStart = fetchCoordinatesViaYandex(cleanedAddressStart);
         String coordinatesEnd = fetchCoordinatesViaYandex(cleanedAddressEnd);
 
-        double distantion = getDistance(coordinatesStart,coordinatesEnd);
-
-        if (adressNavigationRepository.existsByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd)) {
-          throw new DuplicateAdressException("Такие адреса в БД уже есть = " + cleanedAddressStart + "||" + cleanedAddressEnd);
-        }
+        double distantion = getDistance(coordinatesStart, coordinatesEnd);
 
         AdressDistantionEntity entity = new AdressDistantionEntity();
         entity.setFirstAdress(cleanedAddressStart);
@@ -91,7 +90,7 @@ public class GeocodeService {
 //                .build();
 
 
-         return adressNavigationMapper.toDto(entity);
+        return adressNavigationMapper.toDto(entity);
     }
 
     // парсинг адреса из вакханалии в номлаьный
@@ -138,8 +137,8 @@ public class GeocodeService {
                 .build();
 
         HttpResponse<String> response = httpClient.send(
-                    request, HttpResponse.BodyHandlers.ofString()
-           );
+                request, HttpResponse.BodyHandlers.ofString()
+        );
 
         // Парсим ответ Yandex (пример: "pos":"37.6056 55.7602")
         String json = response.body();
@@ -155,7 +154,7 @@ public class GeocodeService {
 
 
     //подсчет расстояния
-    public double getDistance(String startCoords, String endCoords)  {
+    public double getDistance(String startCoords, String endCoords) {
 
         // Парсим координаты
         double[] point1 = parseCoordinates(startCoords);
@@ -171,10 +170,10 @@ public class GeocodeService {
         double Δλ = Math.toRadians(point2[1] - point1[1]);
 
         // Формула Гаверсинуса
-        double a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+        double a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
                 Math.cos(φ1) * Math.cos(φ2) *
-                        Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         double distance = Math.round((R * c) * 100) / 100.0;
         log.info("distantion = {} metres", distance);

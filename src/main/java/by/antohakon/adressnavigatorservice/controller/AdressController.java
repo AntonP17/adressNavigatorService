@@ -2,7 +2,6 @@ package by.antohakon.adressnavigatorservice.controller;
 
 import by.antohakon.adressnavigatorservice.dto.AdressNavigationResponseDto;
 import by.antohakon.adressnavigatorservice.dto.requestAdressDto;
-import by.antohakon.adressnavigatorservice.dto.responseAdressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -10,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
+
 
 @RestController
 @RequestMapping("api/adress")
@@ -24,11 +23,8 @@ public class AdressController {
        return geocodeService.processAddress(adressDto);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public Page<AdressNavigationResponseDto> getAdresses(Pageable pageable) {
         return geocodeService.getAllAdresses(pageable);
-
     }
-
-
 }

@@ -4,14 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.awt.geom.RectangularShape;
 import java.io.IOException;
 import java.time.Instant;
 
@@ -29,17 +26,17 @@ public class GlobalExceptionHandler {
     }
 
 
-@ExceptionHandler(DuplicateAdressException.class)
-public ResponseEntity<ErrorResponse> handleDublicateException(final RuntimeException exception) {
+    @ExceptionHandler(DuplicateAdressException.class)
+    public ResponseEntity<ErrorResponse> handleDublicateException(final RuntimeException exception) {
 
-    return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(new ErrorResponse(
-                 exception.getClass().getSimpleName(),
-                 exception.getMessage(),
-                 Instant.now()
-            ));
-}
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        exception.getClass().getSimpleName(),
+                        exception.getMessage(),
+                        Instant.now()
+                ));
+    }
 
 
     @ExceptionHandler({IOException.class, InterruptedException.class})

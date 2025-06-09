@@ -1,4 +1,4 @@
-package by.antohakon.adressnavigatorservice.dto.mapper;
+package by.antohakon.adressnavigatorservice.mapper;
 
 import by.antohakon.adressnavigatorservice.dto.AdressNavigationResponseDto;
 import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
