@@ -19,8 +19,8 @@ public class AdressController {
     private final GeocodeService geocodeService;
 
     @PostMapping("/process")
-    public AdressNavigationResponseDto processAddress(@RequestBody requestAdressDto adressDto) throws IOException, InterruptedException {
-       return geocodeService.processAddress(adressDto);
+    public void processAddress(@RequestBody requestAdressDto adressDto) throws IOException, InterruptedException {
+       geocodeService.processAddress(adressDto);
     }
 
     @GetMapping("/all")

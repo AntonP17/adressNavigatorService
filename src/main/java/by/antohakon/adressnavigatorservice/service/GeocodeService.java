@@ -2,7 +2,6 @@ package by.antohakon.adressnavigatorservice.service;
 
 import by.antohakon.adressnavigatorservice.dto.*;
 import by.antohakon.adressnavigatorservice.entity.AdressDistantionEntity;
-import by.antohakon.adressnavigatorservice.exceptions.DuplicateAdressException;
 import by.antohakon.adressnavigatorservice.mapper.AdressNavigationMapper;
 import by.antohakon.adressnavigatorservice.repository.AdressNavigationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,7 +19,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -63,45 +62,51 @@ public class GeocodeService {
     }
 
     // пусть основной метод
-    public AdressNavigationResponseDto processAddress(requestAdressDto addressDto) throws IOException, InterruptedException {
+    public void processAddress(requestAdressDto addressDto) throws IOException, InterruptedException {
 
-        String adresStartPoint = addressDto.adressStartPoint();
-        String adresEndPoint = addressDto.adressEndPoint();
+          DaDataApiResponse daDataApiResponse = cleanAddressViaDaData(addressDto.address()); //достали из DadataAPI адрес и координаты
+          YandexApiResponse yandexApiResponse = fetchCoordinatesViaYandex(addressDto.address()); // достаом из YAndexAPI адрес и координаты
 
-        // 1. Очистка адреса через DaData
-        String cleanedAddressStart = cleanAddressViaDaData(adresStartPoint);
-        String cleanedAddressEnd = cleanAddressViaDaData(adresEndPoint);
+          double distance = getDistance(daDataApiResponse.getCoordinates(), yandexApiResponse.getCoordinates());
+//        String adresStartPoint = addressDto.adressStartPoint();
+//        String adresEndPoint = addressDto.adressEndPoint();
+//
+//        // 1. Очистка адреса через DaData
+//        String cleanedAddressStart = cleanAddressViaDaData(adresStartPoint);
+//        String cleanedAddressEnd = cleanAddressViaDaData(adresEndPoint);
+//
+//        // 2. Проверка существования записи в БД
+//        Optional<AdressDistantionEntity> existingEntity = adressNavigationRepository
+//                .findByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd);
+//
+//        if (existingEntity.isPresent()) {
+//            // Если запись существует - возвращаем её
+//            return adressNavigationMapper.toDto(existingEntity.get());
+//        }
+//
+//        // 2. Поиск координат через Yandex
+//        String coordinatesStart = fetchCoordinatesViaYandex(cleanedAddressStart);
+//        String coordinatesEnd = fetchCoordinatesViaYandex(cleanedAddressEnd);
+//
+//        double distantion = getDistance(coordinatesStart, coordinatesEnd);
+//
+//        AdressDistantionEntity entity = new AdressDistantionEntity();
+//        entity.setFirstAdress(cleanedAddressStart);
+//        entity.setSecondAdress(cleanedAddressEnd);
+//        entity.setDistantion(distantion);
+//
+//        adressNavigationRepository.save(entity);
+//
+//        return adressNavigationMapper.toDto(entity);
 
-        // 2. Проверка существования записи в БД
-        Optional<AdressDistantionEntity> existingEntity = adressNavigationRepository
-                .findByFirstAdressAndSecondAdress(cleanedAddressStart, cleanedAddressEnd);
 
-        if (existingEntity.isPresent()) {
-            // Если запись существует - возвращаем её
-            return adressNavigationMapper.toDto(existingEntity.get());
-        }
-
-        // 2. Поиск координат через Yandex
-        String coordinatesStart = fetchCoordinatesViaYandex(cleanedAddressStart);
-        String coordinatesEnd = fetchCoordinatesViaYandex(cleanedAddressEnd);
-
-        double distantion = getDistance(coordinatesStart, coordinatesEnd);
-
-        AdressDistantionEntity entity = new AdressDistantionEntity();
-        entity.setFirstAdress(cleanedAddressStart);
-        entity.setSecondAdress(cleanedAddressEnd);
-        entity.setDistantion(distantion);
-
-        adressNavigationRepository.save(entity);
-
-        return adressNavigationMapper.toDto(entity);
     }
 
     // парсинг адреса из вакханалии в номлаьный
-    private String cleanAddressViaDaData(String dirtyAddress) throws IOException, InterruptedException {
+    private DaDataApiResponse cleanAddressViaDaData(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
-        String requestBody = "[\"" + dirtyAddress + "\"]";
+        String requestBody = "[\"" + address + "\"]";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(dadataApiURL))
@@ -117,17 +122,24 @@ public class GeocodeService {
         String json = response.body();
         log.info("ответ = {}", json);
 
+        // Десериализация JSON-массива в список объектов
+        List<DaDataApiResponse> responses = objectMapper.readValue(json,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, DaDataApiResponse.class));
 
-        DaDataCleanResponse[] cleanResponse = objectMapper.readValue(json, DaDataCleanResponse[].class);
-
-        String cleanAdress = cleanResponse[0].getResult();
-        log.info("чистый адрес = " + cleanAdress);
-        return cleanAdress;
+        // Обработка первого элемента массива
+        if (!responses.isEmpty()) {
+            DaDataApiResponse daDataApiResponse = responses.get(0);
+            log.info("ответ = {} {}", daDataApiResponse.getFormattedAddress(), daDataApiResponse.getCoordinates());
+            return daDataApiResponse;
+        } else {
+            log.error("Получен пустой ответ или ответ не содержит ожидаемых данных");
+            return null;
+        }
 
     }
 
     //поиск координат яндек кратами
-    private String fetchCoordinatesViaYandex(String address) throws IOException, InterruptedException {
+    private YandexApiResponse fetchCoordinatesViaYandex(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = String.format(
@@ -149,12 +161,9 @@ public class GeocodeService {
         String json = response.body();
         log.info("ответ = {}", json);
 
-        YandexGeocodeResponse yandexGeocodeResponse = objectMapper.readValue(json, YandexGeocodeResponse.class);
-
-        String coordinates = yandexGeocodeResponse.getCoordinates().replace(" ", ",");
-        log.info("координаты = {}", coordinates);
-        return coordinates;
-
+        YandexApiResponse yandexGeocodeResponse = objectMapper.readValue(json, YandexApiResponse.class);
+        log.info("парсинг = {} {}", yandexGeocodeResponse.getFormattedAddress(), yandexGeocodeResponse.getCoordinates());
+        return yandexGeocodeResponse;
     }
 
 
