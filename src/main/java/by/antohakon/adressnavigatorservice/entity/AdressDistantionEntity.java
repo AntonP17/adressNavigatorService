@@ -12,9 +12,7 @@ public class AdressDistantionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String firstAdress;
-
-    private String secondAdress;
+    private String address;
 
     private double distantion;
 

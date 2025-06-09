@@ -8,8 +8,7 @@ import lombok.Data;
 public class AdressNavigationResponseDto {
 
     private Long id;
-    private String firstAdress;
-    private String secondAdress;
+    private String address;
     private double distantion;
 
 }

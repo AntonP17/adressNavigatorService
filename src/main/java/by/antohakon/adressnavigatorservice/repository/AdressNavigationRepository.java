@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface AdressNavigationRepository extends JpaRepository<AdressDistantionEntity, Long> {
 
-    boolean existsByFirstAdressAndSecondAdress(String firstAdress, String secondAdress);
+   // boolean existsByFirstAdressAndSecondAdress(String firstAdress, String secondAdress);
 
-    Optional<AdressDistantionEntity> findByFirstAdressAndSecondAdress(String cleanedAddressStart, String cleanedAddressEnd);
+    Optional<AdressDistantionEntity> findByAddress(String address);
 }
