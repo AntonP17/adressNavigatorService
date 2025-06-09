@@ -52,7 +52,7 @@ public class YandexApiResponse {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class GeocoderMetaData {
         @JsonProperty("text")
-        private String formattedAddress; // "Россия, Санкт-Петербург, улица Олеко Дундича, 10к1"
+        private String formattedAddress;
 
         @JsonProperty("Address")
         private Address address;
@@ -71,10 +71,9 @@ public class YandexApiResponse {
     @Data
     public static class Point {
         @JsonProperty("pos")
-        private String position; // "30.392764 59.829161" (долгота и широта)
+        private String position;
     }
 
-    // Геттер для чистого адреса (аналог result в DaData)
     public String getFormattedAddress() {
         if (response != null
                 && response.geoObjectCollection != null
@@ -85,7 +84,6 @@ public class YandexApiResponse {
         return null;
     }
 
-    // Геттер для координат в формате "долгота,широта"
     public String getCoordinates() {
         if (response != null
                 && response.geoObjectCollection != null

@@ -87,7 +87,7 @@ public class GeocodeService {
     }
 
 
-    private DaDataApiResponse findAddressFromDaDataApi(String address) throws IOException, InterruptedException {
+    public DaDataApiResponse findAddressFromDaDataApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
         String requestBody = "[\"" + address + "\"]";
@@ -119,7 +119,7 @@ public class GeocodeService {
     }
 
 
-    private YandexApiResponse findAddressFromYandexApi(String address) throws IOException, InterruptedException {
+    public YandexApiResponse findAddressFromYandexApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = String.format(
