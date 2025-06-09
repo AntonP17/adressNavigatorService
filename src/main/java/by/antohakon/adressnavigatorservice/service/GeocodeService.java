@@ -28,17 +28,23 @@ public class GeocodeService {
 
     @Value("${yandex.api.key}")
     private String yandexApiKey;
+    @Value("${yandex.api.url}")
+    private String yandexApiURL;
 
     @Value("${dadata.api.key}")
     private String dadataApiKey;
-
     @Value("${dadata.secret.key}")
     private String dadataSecretKey;
+    @Value("${dadata.api.url}")
+    private String dadataApiURL;
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
     private final AdressNavigationRepository adressNavigationRepository;
     private final AdressNavigationMapper adressNavigationMapper;
+
+
+
 
     public Page<AdressNavigationResponseDto> getAllAdresses(Pageable pageable) {
 
@@ -82,14 +88,6 @@ public class GeocodeService {
 
         adressNavigationRepository.save(entity);
 
-//        AdressNavigationResponseDto responseDto = AdressNavigationResponseDto.builder()
-//                .id(entity.getId())
-//                .firstAdress(entity.getFirstAdress())
-//                .secondAdress(entity.getSecondAdress())
-//                .distantion(entity.getDistantion())
-//                .build();
-
-
         return adressNavigationMapper.toDto(entity);
     }
 
@@ -97,11 +95,10 @@ public class GeocodeService {
     private String cleanAddressViaDaData(String dirtyAddress) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
-        String url = "https://cleaner.dadata.ru/api/v1/clean/address";
         String requestBody = "[\"" + dirtyAddress + "\"]";
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
+                .uri(URI.create(dadataApiURL))
                 .header("Authorization", "Token " + dadataApiKey)
                 .header("X-Secret", dadataSecretKey)
                 .header("Content-Type", "application/json")
@@ -127,9 +124,11 @@ public class GeocodeService {
     private String fetchCoordinatesViaYandex(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
-        String url = "https://geocode-maps.yandex.ru/v1/?apikey=" + yandexApiKey
-                + "&geocode=" + URLEncoder.encode(address, StandardCharsets.UTF_8)
-                + "&format=json";
+        String url = String.format(
+                yandexApiURL,
+                yandexApiKey,
+                URLEncoder.encode(address, StandardCharsets.UTF_8)
+        );
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -164,15 +163,15 @@ public class GeocodeService {
         final double R = 6371e3;
 
         // Переводим градусы в радианы
-        double φ1 = Math.toRadians(point1[0]);
-        double φ2 = Math.toRadians(point2[0]);
-        double Δφ = Math.toRadians(point2[0] - point1[0]);
-        double Δλ = Math.toRadians(point2[1] - point1[1]);
+        double startLatRad = Math.toRadians(point1[0]);
+        double endLatRad = Math.toRadians(point2[0]);
+        double deltaLatRad = Math.toRadians(point2[0] - point1[0]);
+        double deltaLongRad = Math.toRadians(point2[1] - point1[1]);
 
         // Формула Гаверсинуса
-        double a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        double a = Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2) +
+                Math.cos(startLatRad) * Math.cos(endLatRad) *
+                        Math.sin(deltaLongRad / 2) * Math.sin(deltaLongRad / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         double distance = Math.round((R * c) * 100) / 100.0;
