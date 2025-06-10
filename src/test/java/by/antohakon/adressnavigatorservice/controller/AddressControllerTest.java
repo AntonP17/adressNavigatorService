@@ -29,7 +29,7 @@ public class AddressControllerTest {
     public void processAddress() throws Exception {
         String addressDto = """
                 {
-                    "address": "Спб Олеко Дундича 5"
+                    "address": ""
                 }""";
 
         mockMvc.perform(post("/api/adress/process")
