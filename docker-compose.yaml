@@ -9,14 +9,20 @@ services:
       MYSQL_ROOT_PASSWORD: 1234567
     ports:
       - "3306:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234567" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
 
-  adress-navigator:
+  address-navigator:
     container_name: adress-navigator
-    #build: .
-    image: antonp17/adressnavigatorservice-adress-navigator:1.1
+    build: .
+    #image: antonp17/adressnavigatorservice-adress-navigator:1.1
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/my-DB
       SPRING_DATASOURCE_USERNAME: 123456
