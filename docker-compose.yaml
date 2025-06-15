@@ -18,8 +18,8 @@ services:
 
   address-navigator:
     container_name: address-navigator
-    build: .
-    #image: antonp17/adressnavigatorservice-adress-navigator:1.1
+    #build: .
+    image: antonp17/adressnavigatorservice-address-navigator:1.2
     depends_on:
       mysql:
         condition: service_healthy

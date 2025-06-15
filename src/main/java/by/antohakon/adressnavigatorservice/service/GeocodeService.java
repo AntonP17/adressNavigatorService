@@ -61,7 +61,7 @@ public class GeocodeService {
 
     public AddressNavigationResponseDto processAddress(requestAddressDto addressDto) throws IOException, InterruptedException {
 
-          DaDataApiResponse daDataApiResponse = findAddressFromDaDataApi(addressDto.address());
+        DaDataApiResponse daDataApiResponse = findAddressFromDaDataApi(addressDto.address());
 
         Optional<AddressDistantionEntity> existingEntity = addressNavigationRepository
                 .findByAddress(daDataApiResponse.getFormattedAddress());
@@ -71,9 +71,9 @@ public class GeocodeService {
             return addressNavigationMapper.toDto(existingEntity.get());
         }
 
-          YandexApiResponse yandexApiResponse = findAddressFromYandexApi(addressDto.address());
+        YandexApiResponse yandexApiResponse = findAddressFromYandexApi(addressDto.address());
 
-          double distance = getDistance(daDataApiResponse.getCoordinates(), yandexApiResponse.getCoordinates());
+        double distance = getDistance(daDataApiResponse.getCoordinates(), yandexApiResponse.getCoordinates());
 
         AddressDistantionEntity entity = new AddressDistantionEntity();
         entity.setAddress(daDataApiResponse.getFormattedAddress());
@@ -172,10 +172,10 @@ public class GeocodeService {
     }
 
     private static double[] parseCoordinates(String coord) {
-            String[] parts = coord.split(",");
-            return new double[]{
-                    Double.parseDouble(parts[0].trim()), // Широта
-                    Double.parseDouble(parts[1].trim())  // Долгота
-            };
+        String[] parts = coord.split(",");
+        return new double[]{
+                Double.parseDouble(parts[0].trim()), // Широта
+                Double.parseDouble(parts[1].trim())  // Долгота
+        };
     }
 }
