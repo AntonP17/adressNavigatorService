@@ -7,6 +7,7 @@ import by.antohakon.adressnavigatorservice.dto.RequestAddressDto;
 import by.antohakon.adressnavigatorservice.entity.AddressDistantionEntity;
 import by.antohakon.adressnavigatorservice.mapper.AddressNavigationMapper;
 import by.antohakon.adressnavigatorservice.repository.AddressNavigationRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,6 +44,8 @@ class GeocodeServiceTest {
     @Mock
     private AddressNavigationMapper addressNavigationMapper;
 
+
+
     @InjectMocks
     private GeocodeService geocodeService;
 
@@ -49,31 +53,36 @@ class GeocodeServiceTest {
     private final String testYandexUrl = "https://geocode-maps.yandex.ru/1.x/";
 
     @BeforeEach
-    void setUp() {
-
-        geocodeService = new GeocodeService(httpClient, objectMapper, addressNavigationRepository, addressNavigationMapper);
-        TypeFactory typeFactory = TypeFactory.defaultInstance();
-        when(objectMapper.getTypeFactory()).thenReturn(typeFactory);
+    void setUp()
+    {
+        ReflectionTestUtils.setField(geocodeService, "dadataApiURL", "https://test.dadata.url");
+        ReflectionTestUtils.setField(geocodeService, "dadataApiKey", "test-api-key");
+        ReflectionTestUtils.setField(geocodeService, "dadataSecretKey", "test-secret-key");
     }
 
-    @SneakyThrows
-    @Test
-    @DisplayName("возврат из БД")
-    void processAddress_Positive1() { //из БД возвра
 
-        RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
-     // ЗАМОКАТЬ HTTPCLIENT SEND , ВЕРНУТЬ РЕСПОНС
-        when(addressNavigationRepository.findByAddress(requestAddressDto.address()))
-                .thenReturn(Optional.ofNullable(AddressDistantionEntity
-                        .builder()
-                        .address(requestAddressDto.address())
-                        .distantion(2.2)
-                        .build()));
-        AddressNavigationResponseDto response = geocodeService.processAddress(requestAddressDto);
-        assertNotNull(response);
-        assertEquals(requestAddressDto.address(), response.getAddress());
+        @SneakyThrows
+        @Test
+        @DisplayName("возврат из БД")
+        void processAddress_Positive1() { //из БД возвра
 
-    }
+            RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
+
+            when(addressNavigationRepository.findByAddress(requestAddressDto.address()))
+                    .thenReturn(Optional.of(AddressDistantionEntity
+                            .builder()
+                            .address(requestAddressDto.address())
+                            .distantion(2.2)
+                            .build()));
+
+            daDataResponseMock(requestAddressDto.address(), "60.0", "30.0");
+
+            AddressNavigationResponseDto response = geocodeService.processAddress(requestAddressDto);
+
+            assertNotNull(response);
+            assertEquals(requestAddressDto.address(), response.getAddress());
+
+        }
 
     @SneakyThrows
     @Test
@@ -111,29 +120,29 @@ class GeocodeServiceTest {
     // аргументы передать (координаты адрес и тд что в запросе к АПИ)
     private void daDataResponseMock(String address, String lat, String lon){
 
-        HttpResponse<String> response = Mockito.mock(HttpResponse.class);// ДОДЕЛТЬ
-
-        String jsonResponse = """
-    [
-        {
-            "result": "%s",
-            "geo_lat": "%s",
-            "geo_lon": "%s",
-            "qc_geo": "0"
-        }
-    ]""".formatted(address, lat, lon);
+        HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+        String jsonResponse = String.format("""
+            [{
+                "result": "%s",
+                "geo_lat": "%s",
+                "geo_lon": "%s",
+                "qc_geo": "0"
+            }]
+            """, address, lat, lon);
 
         when(response.body()).thenReturn(jsonResponse);
+
         DaDataApiResponse daDataResponse = new DaDataApiResponse();
         daDataResponse.setFormattedAddress(address);
         daDataResponse.setLatitude(lat);
         daDataResponse.setLongitude(lon);
 
-        // тут так же от ДАДаты
-        // респонс дадаты собрать daDataResponse
-        when(objectMapper.readValue(anyString(), eq(DaDataApiResponse.class))).thenReturn(daDataResponse);
+//        when(objectMapper.readValue(anyString(), eq(DaDataApiResponse.class))).thenReturn(daDataResponse);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenReturn(response);
+        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+                .thenReturn(List.of(daDataResponse));
+
 
     }
 //
