@@ -59,7 +59,7 @@ public class GeocodeService {
     }
 
 
-    public AddressNavigationResponseDto processAddress(requestAddressDto addressDto) throws IOException, InterruptedException {
+    public AddressNavigationResponseDto processAddress(RequestAddressDto addressDto) throws IOException, InterruptedException {
 
         DaDataApiResponse daDataApiResponse = findAddressFromDaDataApi(addressDto.address());
 
@@ -87,7 +87,7 @@ public class GeocodeService {
     }
 
 
-    public DaDataApiResponse findAddressFromDaDataApi(String address) throws IOException, InterruptedException {
+    private DaDataApiResponse findAddressFromDaDataApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод cleanAddressViaDaData");
         String requestBody = "[\"" + address + "\"]";
@@ -119,7 +119,7 @@ public class GeocodeService {
     }
 
 
-    public YandexApiResponse findAddressFromYandexApi(String address) throws IOException, InterruptedException {
+    private YandexApiResponse findAddressFromYandexApi(String address) throws IOException, InterruptedException {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = String.format(
@@ -146,7 +146,7 @@ public class GeocodeService {
     }
 
 
-    public double getDistance(String startCoords, String endCoords) {
+    private double getDistance(String startCoords, String endCoords) {
 
         double[] point1 = parseCoordinates(startCoords);
         double[] point2 = parseCoordinates(endCoords);

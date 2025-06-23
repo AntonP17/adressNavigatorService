@@ -1,11 +1,14 @@
 package by.antohakon.adressnavigatorservice.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.hibernate.annotations.Check;
 
 @Entity
+@Builder
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "adress_navigation", indexes = {
         @Index(columnList = "address", name = "address_index")
 })

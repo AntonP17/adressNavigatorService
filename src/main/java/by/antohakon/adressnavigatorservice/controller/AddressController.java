@@ -1,7 +1,7 @@
 package by.antohakon.adressnavigatorservice.controller;
 
 import by.antohakon.adressnavigatorservice.dto.AddressNavigationResponseDto;
-import by.antohakon.adressnavigatorservice.dto.requestAddressDto;
+import by.antohakon.adressnavigatorservice.dto.RequestAddressDto;
 import by.antohakon.adressnavigatorservice.service.GeocodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,7 +19,7 @@ public class AddressController {
     private final GeocodeService geocodeService;
 
     @PostMapping("/process")
-    public AddressNavigationResponseDto processAddress(@RequestBody requestAddressDto addressDto) throws IOException, InterruptedException {
+    public AddressNavigationResponseDto processAddress(@RequestBody RequestAddressDto addressDto) throws IOException, InterruptedException {
       return geocodeService.processAddress(addressDto);
     }
 
