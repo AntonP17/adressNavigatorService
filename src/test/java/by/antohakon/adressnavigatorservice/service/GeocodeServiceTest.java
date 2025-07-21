@@ -133,6 +133,11 @@ class GeocodeServiceTest {
                                 .distantion(addressDistantionEntity.getDistantion())
                                 .build()
                 );
+
+        AddressNavigationResponseDto response = geocodeService.processAddress(requestAddressDto);
+
+        assertNotNull(response);
+        assertEquals(requestAddressDto.address(), response.getAddress());
     }
 
         @SneakyThrows
