@@ -8,11 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.io.IOException;
 import java.time.Instant;
 
-@ControllerAdvice
+@RestControllerAdvice
 @Slf4j
 @Data
 public class GlobalExceptionHandler {
@@ -22,7 +23,7 @@ public class GlobalExceptionHandler {
     private static class ErrorResponse {
         private String errorType;
         private String message;
-        private Instant timestamp;
+
     }
 
     @ExceptionHandler({IOException.class, InterruptedException.class})
@@ -32,8 +33,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_ACCEPTABLE)
                 .body(new ErrorResponse(
                         ex.getClass().getSimpleName(),
-                        ex.getMessage(),
-                        Instant.now()
+                        ex.getMessage()
                 ));
     }
 
@@ -45,8 +45,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(
                         ex.getClass().getSimpleName(),
-                        ex.getMessage(),
-                        Instant.now()
+                        ex.getMessage()
                 ));
     }
 
@@ -59,8 +58,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(
                         ex.getClass().getSimpleName(),
-                        ex.getMessage(),
-                        Instant.now()
+                        ex.getMessage()
                 ));
     }
 

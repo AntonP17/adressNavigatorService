@@ -4,6 +4,7 @@ import by.antohakon.adressnavigatorservice.dto.*;
 import by.antohakon.adressnavigatorservice.entity.AddressDistantionEntity;
 import by.antohakon.adressnavigatorservice.mapper.AddressNavigationMapper;
 import by.antohakon.adressnavigatorservice.repository.AddressNavigationRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,7 +107,8 @@ public class GeocodeService {
         log.info("ответ = {}", json);
 
         List<DaDataApiResponse> responses = objectMapper.readValue(json,
-                objectMapper.getTypeFactory().constructCollectionType(List.class, DaDataApiResponse.class));
+                new TypeReference<List<DaDataApiResponse>>() {});
+                // objectMapper.getTypeFactory().constructCollectionType(List.class, DaDataApiResponse.class));
 
         if (!responses.isEmpty()) {
             DaDataApiResponse daDataApiResponse = responses.get(0);
