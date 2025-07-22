@@ -59,6 +59,8 @@ class GeocodeServiceTest {
         ReflectionTestUtils.setField(geocodeService, "dadataApiURL", "https://test.dadata.url");
         ReflectionTestUtils.setField(geocodeService, "dadataApiKey", "test-api-key");
         ReflectionTestUtils.setField(geocodeService, "dadataSecretKey", "test-secret-key");
+        ReflectionTestUtils.setField(geocodeService, "yandexApiURL", testYandexUrl);
+        ReflectionTestUtils.setField(geocodeService, "yandexApiKey", testDadataUrl);
     }
 
 
@@ -142,6 +144,9 @@ class GeocodeServiceTest {
 
         @SneakyThrows
     // аргументы передать (координаты адрес и тд что в запросе к АПИ)
+
+      //  ЗАМОКАТЬ HTTPCLIENT СЕ ТАКИ?????
+
     private void yandexResponseMock(String address, String lat, String lon){
 
 
@@ -172,6 +177,8 @@ class GeocodeServiceTest {
     }
     """, lon, lat, address, address);
 
+            when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                    .thenReturn(response);
             when(response.body()).thenReturn(jsonResponse);
             when(yandexApiResponse.getFormattedAddress())
                     .thenReturn("Спб, Олеко Дундича 5");

@@ -125,8 +125,8 @@ public class GeocodeService {
 
         log.info("зашли в метод fetchCoordinatesViaYandex");
         String url = String.format(
-                yandexApiURL,
-                yandexApiKey,
+                yandexApiURL,  //ЗАМОКАТЬ НАДООООО
+                yandexApiKey, // ЗАМОКАТЬ НАДЛО ПОТОМУ ЧТО В ЭТИХ СТРОКАХ NULL
                 URLEncoder.encode(address, StandardCharsets.UTF_8)
         );
 
