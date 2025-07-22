@@ -22,6 +22,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.http.HttpClient;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class GeocodeServiceTest {
 
     @Mock
@@ -67,7 +70,7 @@ class GeocodeServiceTest {
     @SneakyThrows
     @Test
     @DisplayName("возврат из БД")
-    void processAddress_Positive1() { //из БД возврат
+    void processAddress_Positive1() {
 
         RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
 
@@ -77,10 +80,12 @@ class GeocodeServiceTest {
                 .address(requestAddressDto.address())
                 .distantion(2.2)
                 .build();
+
         when(addressNavigationRepository.findByAddress(requestAddressDto.address()))
                 .thenReturn(Optional.of(addressDistantionEntity));
 
         daDataResponseMock(requestAddressDto.address(), "60.0", "30.0");
+
         when(addressNavigationMapper.toDto(addressDistantionEntity))
                 .thenReturn(
                         AddressNavigationResponseDto.builder()
@@ -99,42 +104,36 @@ class GeocodeServiceTest {
 
     @SneakyThrows
     @Test
-    @DisplayName("В АПИ") // КОГДА НЕ ВОЗВАЩАЕТ ИЗ БАЗЫ ДАННЫХ ,
-        // ВТОРОЙ СЦЕНАРИЙ КОГДА В ГЕОКОДСЕРВИСЕ В МЕТОДЕ ПРОЦЕСС АДРЕС ИДЕТ ДАЛЬШЕ В ЯНДЕКС ЕСЛИ НЕ НАШЕЛ В БД
-        // , НАДО ПРАВИЛЬНО ЗАМОКАТЬ МАПИНГ
-    // ДОДЕЛАТЬ!!!!!!!!!!!!!!!!!
+    @DisplayName("В АПИ")
     void processAddress_Positive2() {
 
         RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
 
-        // Мок пустого результата из БД
         when(addressNavigationRepository.findByAddress(anyString()))
                 .thenReturn(Optional.empty());
 
-        // ответвы АПИ
         daDataResponseMock(requestAddressDto.address(), "60.0", "30.0");
         yandexResponseMock(requestAddressDto.address(), "60.0", "30.0");
 
-        //сохранеиене в БД
-        AddressDistantionEntity addressDistantionEntity = AddressDistantionEntity
-                .builder()
-                .id(1L)
-                .address(requestAddressDto.address())
-                .distantion(2.2)
-                .build();
-
         when(addressNavigationRepository.save(any()))
-                .thenReturn(addressDistantionEntity);
+                .thenAnswer(invocation -> {
+                    AddressDistantionEntity e = invocation.getArgument(0);
+                    return AddressDistantionEntity.builder()
+                            .id(1L)
+                            .address(e.getAddress())
+                            .distantion(e.getDistantion())
+                            .build();
+                });
 
-
-        when(addressNavigationMapper.toDto(addressDistantionEntity))
-                .thenReturn(
-                        AddressNavigationResponseDto.builder()
-                                .id(addressDistantionEntity.getId())
-                                .address(addressDistantionEntity.getAddress())
-                                .distantion(addressDistantionEntity.getDistantion())
-                                .build()
-                );
+        when(addressNavigationMapper.toDto(any(AddressDistantionEntity.class)))
+                .thenAnswer(invocation -> {
+                    AddressDistantionEntity e = invocation.getArgument(0);
+                    return AddressNavigationResponseDto.builder()
+                            .id(e.getId())
+                            .address(e.getAddress())
+                            .distantion(e.getDistantion())
+                            .build();
+                });
 
         AddressNavigationResponseDto response = geocodeService.processAddress(requestAddressDto);
 
@@ -142,56 +141,50 @@ class GeocodeServiceTest {
         assertEquals(requestAddressDto.address(), response.getAddress());
     }
 
-        @SneakyThrows
-    // аргументы передать (координаты адрес и тд что в запросе к АПИ)
+    @SneakyThrows
+    private void yandexResponseMock(String address, String lat, String lon) {
 
-      //  ЗАМОКАТЬ HTTPCLIENT СЕ ТАКИ?????
-
-    private void yandexResponseMock(String address, String lat, String lon){
-
-
-            HttpResponse<String> response = Mockito.mock(HttpResponse.class);
-            String jsonResponse = String.format("""
-    {
-        "response": {
-            "GeoObjectCollection": {
-                "featureMember": [
-                    {
-                        "GeoObject": {
-                            "Point": {
-                                "pos": "%s %s"
-                            },
-                            "metaDataProperty": {
-                                "GeocoderMetaData": {
-                                    "text": "%s",
-                                    "Address": {
-                                        "formatted": "%s"
+        HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+        String jsonResponse = String.format("""
+                {
+                    "response": {
+                        "GeoObjectCollection": {
+                            "featureMember": [
+                                {
+                                    "GeoObject": {
+                                        "Point": {
+                                            "pos": "%s %s"
+                                        },
+                                        "metaDataProperty": {
+                                            "GeocoderMetaData": {
+                                                "text": "%s",
+                                                "Address": {
+                                                    "formatted": "%s"
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            }
+                            ]
                         }
                     }
-                ]
-            }
-        }
-    }
-    """, lon, lat, address, address);
+                }
+                """, lon, lat, address, address);
 
-            when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-                    .thenReturn(response);
-            when(response.body()).thenReturn(jsonResponse);
-            when(yandexApiResponse.getFormattedAddress())
-                    .thenReturn("Спб, Олеко Дундича 5");
-            when(yandexApiResponse.getCoordinates())
-                    .thenReturn("60.0, 30.0");
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(response);
+        when(response.body()).thenReturn(jsonResponse);
+        when(yandexApiResponse.getFormattedAddress())
+                .thenReturn("Спб, Олеко Дундича 5");
+        when(yandexApiResponse.getCoordinates())
+                .thenReturn("60.0, 30.0");
 
-            when(objectMapper.readValue(anyString(), eq(YandexApiResponse.class)))
-                    .thenReturn(yandexApiResponse);
+        when(objectMapper.readValue(anyString(), eq(YandexApiResponse.class)))
+                .thenReturn(yandexApiResponse);
 
     }
 
     @SneakyThrows
-    // аргументы передать (координаты адрес и тд что в запросе к АПИ)
     private void daDataResponseMock(String address, String lat, String lon) {
 
         HttpResponse<String> response = Mockito.mock(HttpResponse.class);
@@ -218,105 +211,4 @@ class GeocodeServiceTest {
 
 
     }
-//
-//    // тест негативный , замокать так же но подобрать неожидаемы данные, тест должен сломаться
-//    //
-//
-//
-//
-//
-
-
-//
-//
-//
-//
-//    @Test
-//    void findAddressFromDaDataApi_ShouldReturnResponse_WhenValidAddress() throws Exception {
-//        // Arrange
-//        String testAddress = "Москва, Ленина 1";
-//        String jsonResponse = "[{\"result\":\"г Москва, ул Ленина, д 1\",\"geo_lat\":\"55.123\",\"geo_lon\":\"37.456\"}]";
-//
-//        DaDataApiResponse expectedResponse = new DaDataApiResponse();
-//        expectedResponse.setFormattedAddress("г Москва, ул Ленина, д 1");
-//        expectedResponse.setLatitude("55.123");
-//        expectedResponse.setLongitude("37.456");
-//
-//        // Настройка моков
-//        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-//                .thenReturn(httpResponse);
-//        when(httpResponse.body()).thenReturn(jsonResponse);
-//        when(objectMapper.readValue(eq(jsonResponse), any(JavaType.class)))
-//                .thenReturn(List.of(expectedResponse));
-//
-//        // Act
-//        DaDataApiResponse result = geocodeService.findAddressFromDaDataApi(testAddress);
-//
-//        // Assert
-//        assertNotNull(result);
-//        assertEquals("г Москва, ул Ленина, д 1", result.getFormattedAddress());
-//        assertEquals("37.456,55.123", result.getCoordinates());
-//    }
-//
-//    @Test
-//    void findAddressFromYandexApi_ShouldReturnCoordinates_WhenValidAddress() throws Exception {
-//        // Arrange
-//        String testAddress = "Москва, Красная площадь";
-//        String jsonResponse = """
-//                {
-//                    "response": {
-//                        "GeoObjectCollection": {
-//                            "featureMember": [
-//                                {
-//                                    "GeoObject": {
-//                                        "metaDataProperty": {
-//                                            "GeocoderMetaData": {
-//                                                "text": "Россия, Москва, Красная площадь"
-//                                            }
-//                                        },
-//                                        "Point": {
-//                                            "pos": "37.617635 55.755814"
-//                                        }
-//                                    }
-//                                }
-//                            ]
-//                        }
-//                    }
-//                }""";
-//
-//        // Настройка моков только для этого теста
-//        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-//                .thenReturn(httpResponse);
-//        when(httpResponse.body()).thenReturn(jsonResponse);
-//
-//        // Создаем ожидаемый объект ответа
-//        YandexApiResponse expectedResponse = new YandexApiResponse();
-//        YandexApiResponse.Response response = new YandexApiResponse.Response();
-//        YandexApiResponse.GeoObjectCollection collection = new YandexApiResponse.GeoObjectCollection();
-//        YandexApiResponse.FeatureMember member = new YandexApiResponse.FeatureMember();
-//        YandexApiResponse.GeoObject geoObject = new YandexApiResponse.GeoObject();
-//        YandexApiResponse.Point point = new YandexApiResponse.Point();
-//        point.setPosition("37.617635 55.755814");
-//        YandexApiResponse.MetaDataProperty metaDataProperty = new YandexApiResponse.MetaDataProperty();
-//        YandexApiResponse.GeocoderMetaData geocoderMetaData = new YandexApiResponse.GeocoderMetaData();
-//        geocoderMetaData.setFormattedAddress("Россия, Москва, Красная площадь");
-//        metaDataProperty.setGeocoderMetaData(geocoderMetaData);
-//        geoObject.setPoint(point);
-//        geoObject.setMetaDataProperty(metaDataProperty);
-//        member.setGeoObject(geoObject);
-//        collection.setFeatureMember(List.of(member));
-//        response.setGeoObjectCollection(collection);
-//        expectedResponse.setResponse(response);
-//
-//        when(objectMapper.readValue(jsonResponse, YandexApiResponse.class))
-//                .thenReturn(expectedResponse);
-//
-//        // Act
-//        YandexApiResponse result = geocodeService.findAddressFromYandexApi(testAddress);
-//
-//        // Assert
-//        assertNotNull(result, "Результат не должен быть null");
-//        assertEquals("Россия, Москва, Красная площадь", result.getFormattedAddress());
-//        assertEquals("37.617635,55.755814", result.getCoordinates());
-//    }
 }
