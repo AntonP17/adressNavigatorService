@@ -25,7 +25,10 @@ import org.mockito.internal.matchers.Null;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -187,6 +190,28 @@ class GeocodeServiceTest {
     @Test
     @DisplayName("ключ апи прокис")
     void processAdress_Negative3() {
+
+        // пытался сделать нормлаьные загловки и тело ответа, но получилась фигня
+
+        RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
+
+        when(addressNavigationRepository.findByAddress(anyString()))
+                .thenReturn(Optional.empty());
+
+        HttpClientErrorException exception = HttpClientErrorException.create(
+                HttpStatus.FORBIDDEN,
+                "Forbidden",
+                null,
+                null,
+                null
+        );
+
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(exception);
+
+        // 4. Проверка
+        assertThrows(HttpClientErrorException.class,
+                () -> geocodeService.processAddress(requestAddressDto));
 
     }
 
