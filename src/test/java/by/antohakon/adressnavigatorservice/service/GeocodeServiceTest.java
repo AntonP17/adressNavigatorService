@@ -21,11 +21,13 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.internal.matchers.Null;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -113,7 +115,7 @@ class GeocodeServiceTest {
                 .thenReturn(Optional.empty());
 
         daDataResponseMock(requestAddressDto.address(), "60.0", "30.0");
-        yandexResponseMock(requestAddressDto.address(), "60.0", "30.0");
+        yandexResponseMock(requestAddressDto.address(), "170.0", "302.0");
 
         when(addressNavigationRepository.save(any()))
                 .thenAnswer(invocation -> {
@@ -139,6 +141,53 @@ class GeocodeServiceTest {
 
         assertNotNull(response);
         assertEquals(requestAddressDto.address(), response.getAddress());
+    }
+
+    @SneakyThrows
+    @Test
+    @DisplayName("Dadata не отвечает")
+    void processAddress_Negative1() {
+
+        RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
+
+        when(addressNavigationRepository.findByAddress(anyString()))
+                .thenReturn(Optional.empty());
+
+        when(httpClient.send(any(HttpRequest.class) , any()))
+                .thenThrow(new IOException("DaData недоступна"));
+
+        assertThrows(IOException.class, () -> {
+            geocodeService.processAddress(requestAddressDto);
+        });
+    }
+
+    @SneakyThrows
+    @Test
+    @DisplayName("YandexApi не овтечает")
+    void processAdress_Negative2() {
+
+        RequestAddressDto requestAddressDto = new RequestAddressDto("Спб, Олеко Дундича 5");
+
+        when(addressNavigationRepository.findByAddress(anyString()))
+                .thenReturn(Optional.empty());
+
+        daDataResponseMock(requestAddressDto.address(), "60.0", "30.0");
+
+        when(httpClient.send(any(HttpRequest.class) , any()))
+                .thenReturn(mock(HttpResponse.class))
+                .thenThrow(new NullPointerException("Yandex Api недоступно"));
+
+        assertThrows(NullPointerException.class, () -> {
+            geocodeService.processAddress(requestAddressDto);
+        });
+
+    }
+
+    @SneakyThrows
+    @Test
+    @DisplayName("ключ апи прокис")
+    void processAdress_Negative3() {
+
     }
 
     @SneakyThrows
