@@ -49,6 +49,7 @@ class GeocodeServiceTest {
     private HttpClient httpClient;
     @Mock
     private ObjectMapper objectMapper;
+    private ObjectMapper realObjectMapper = new ObjectMapper();
     @Mock
     private AddressNavigationRepository addressNavigationRepository;
     @Mock
@@ -104,6 +105,7 @@ class GeocodeServiceTest {
 
         assertNotNull(response);
         assertEquals(requestAddressDto.address(), response.getAddress());
+        assertEquals(addressDistantionEntity.getDistantion(), response.getDistantion());
 
     }
 
@@ -144,6 +146,9 @@ class GeocodeServiceTest {
 
         assertNotNull(response);
         assertEquals(requestAddressDto.address(), response.getAddress());
+        // расчитать вручную координаты которые возвращает response и сравнить (P.s использовать класс Math) в телеге пример
+        // (Math.abs(polyLen - segSum) < 1e-6) погуглить если что посмотреть
+
     }
 
     @SneakyThrows
@@ -248,13 +253,10 @@ class GeocodeServiceTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenReturn(response);
         when(response.body()).thenReturn(jsonResponse);
-        when(yandexApiResponse.getFormattedAddress())
-                .thenReturn("Спб, Олеко Дундича 5");
-        when(yandexApiResponse.getCoordinates())
-                .thenReturn("60.0, 30.0");
+        YandexApiResponse yandexApiResponse1 = realObjectMapper.readValue(jsonResponse, YandexApiResponse.class);
 
         when(objectMapper.readValue(anyString(), eq(YandexApiResponse.class)))
-                .thenReturn(yandexApiResponse);
+                .thenReturn(yandexApiResponse1);
 
     }
 
